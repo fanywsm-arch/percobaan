@@ -1,0 +1,64 @@
+#define BLYNK_TEMPLATE_ID "TMPLxxxx"
+#define BLYNK_TEMPLATE_NAME "Monitoring Servo"
+#define BLYNK_AUTH_TOKEN "YourAuthToken"
+
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+#include <Servo.h>
+
+char ssid[] = "NamaWiFi";
+char pass[] = "PasswordWiFi";
+
+// Pin sensor dan servo
+#define LDRPIN 34
+#define SERVOPIN 18
+
+Servo myServo;
+
+BlynkTimer timer;
+
+// Fungsi kirim data sensor ke Blynk
+void sendSensor()
+{
+  int cahaya = analogRead(LDRPIN);
+
+  // Kirim data sensor ke Blynk
+  Blynk.virtualWrite(V0, cahaya);
+
+  // Tampilkan di Serial Monitor
+  Serial.print("Nilai Cahaya: ");
+  Serial.println(cahaya);
+}
+
+// Kontrol servo dari Blynk
+BLYNK_WRITE(V1)
+{
+  int posisi = param.asInt();
+
+  // Atur sudut servo
+  myServo.write(posisi);
+
+  Serial.print("Posisi Servo: ");
+  Serial.println(posisi);
+}
+
+void setup()
+{
+  Serial.begin(115200);
+
+  // Inisialisasi servo
+  myServo.attach(SERVOPIN);
+
+  // Koneksi ke Blynk
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+
+  // Kirim data sensor setiap 2 detik
+  timer.setInterval(2000L, sendSensor);
+}
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+}
