@@ -1,0 +1,118 @@
+#define BLYNK_TEMPLATE_ID "TMPLxxxx"
+#define BLYNK_TEMPLATE_NAME "Monitoring IoT"
+#define BLYNK_AUTH_TOKEN "YourAuthToken"
+
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+#include <DHT.h>
+#include <Servo.h>
+
+char ssid[] = "NamaWiFi";
+char pass[] = "PasswordWiFi";
+
+// ==================== PIN ====================
+
+// Sensor
+#define DHTPIN 4
+#define DHTTYPE DHT11
+#define LDRPIN 34
+
+// Aktuator
+#define LEDPIN 2
+#define SERVOPIN 18
+
+// ==================== OBJEK ====================
+
+DHT dht(DHTPIN, DHTTYPE);
+Servo myServo;
+
+BlynkTimer timer;
+
+// ==================== FUNGSI SENSOR ====================
+
+void sendSensor()
+{
+  // Membaca sensor DHT11
+  float suhu = dht.readTemperature();
+  float kelembaban = dht.readHumidity();
+
+  // Membaca sensor LDR
+  int cahaya = analogRead(LDRPIN);
+
+  // Cek pembacaan DHT
+  if (isnan(suhu) || isnan(kelembaban))
+  {
+    Serial.println("Gagal membaca DHT11");
+    return;
+  }
+
+  // Kirim data ke Blynk
+  Blynk.virtualWrite(V0, suhu);
+  Blynk.virtualWrite(V1, kelembaban);
+  Blynk.virtualWrite(V2, cahaya);
+
+  // Tampilkan ke Serial Monitor
+  Serial.print("Suhu: ");
+  Serial.print(suhu);
+
+  Serial.print(" °C | Kelembaban: ");
+  Serial.print(kelembaban);
+
+  Serial.print(" % | Cahaya: ");
+  Serial.println(cahaya);
+}
+
+// ==================== KONTROL LED ====================
+
+BLYNK_WRITE(V3)
+{
+  int nilaiLED = param.asInt();
+
+  digitalWrite(LEDPIN, nilaiLED);
+
+  Serial.print("LED: ");
+  Serial.println(nilaiLED);
+}
+
+// ==================== KONTROL SERVO ====================
+
+BLYNK_WRITE(V4)
+{
+  int posisiServo = param.asInt();
+
+  myServo.write(posisiServo);
+
+  Serial.print("Servo: ");
+  Serial.println(posisiServo);
+}
+
+// ==================== SETUP ====================
+
+void setup()
+{
+  Serial.begin(115200);
+
+  // Inisialisasi pin
+  pinMode(LEDPIN, OUTPUT);
+
+  // Mulai sensor
+  dht.begin();
+
+  // Mulai servo
+  myServo.attach(SERVOPIN);
+
+  // Koneksi Blynk
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+
+  // Kirim data setiap 2 detik
+  timer.setInterval(2000L, sendSensor);
+}
+
+// ==================== LOOP ====================
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+}
